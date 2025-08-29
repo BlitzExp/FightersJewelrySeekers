@@ -45,6 +45,11 @@ public class GameConfiguration : MonoBehaviour
     [SerializeField] Object blueJewelRing;
     [SerializeField] Object greenJewelRing;
 
+    [Header("ChestPrefab")]
+    [SerializeField] GameObject redChest;
+    [SerializeField] GameObject blueChest;
+    [SerializeField] GameObject greenChest;
+
     private Vector3[,] grid; // posiciones del grid
     private int gridWidth;
     private int gridHeight;
@@ -84,6 +89,7 @@ public class GameConfiguration : MonoBehaviour
 
 
         GenerateGrid();
+        spawnChests();
         SpawnAgents();
         SpawnJewels();
     }
@@ -152,6 +158,56 @@ public class GameConfiguration : MonoBehaviour
             occupiedPositions.Add(pos);
         }
     }
+
+    void spawnChests()
+    {
+        if (stage == null) return;
+
+        // Centro del escenario
+        Vector3 stageCenter = stage.transform.position;
+
+        // Calcular los límites del grid (ya reducido al 90%)
+        float gridUStage = UStage * GRID_PERCENT;
+        float gridVStage = VStage * GRID_PERCENT;
+
+        float halfWidth = gridUStage / 2;
+        float halfHeight = gridVStage / 2;
+
+        // Esquinas (X,Z)
+        Vector3[] corners = new Vector3[]
+        {
+        new Vector3(stageCenter.x - halfWidth, stageCenter.y, stageCenter.z - halfHeight), // abajo izquierda
+        new Vector3(stageCenter.x + halfWidth, stageCenter.y, stageCenter.z - halfHeight), // abajo derecha
+        new Vector3(stageCenter.x - halfWidth, stageCenter.y, stageCenter.z + halfHeight), // arriba izquierda
+        new Vector3(stageCenter.x + halfWidth, stageCenter.y, stageCenter.z + halfHeight)  // arriba derecha
+        };
+
+        // Instanciar cofres en las esquinas
+        if (redChest != null)
+        {
+            GameObject chest = Instantiate(redChest, corners[0], Quaternion.identity);
+            chest.transform.localScale = chest.transform.localScale * AgentSize;
+            chest.transform.localRotation = Quaternion.Euler(-90, chest.transform.localRotation.eulerAngles.y, chest.transform.localRotation.eulerAngles.z);
+            occupiedPositions.Add(corners[0]);
+        }
+
+        if (blueChest != null)
+        {
+            GameObject chest = Instantiate(blueChest, corners[1], Quaternion.identity);
+            chest.transform.localScale = chest.transform.localScale * AgentSize;
+            chest.transform.localRotation = Quaternion.Euler(-90, chest.transform.localRotation.eulerAngles.y, chest.transform.localRotation.eulerAngles.z);
+            occupiedPositions.Add(corners[1]);
+        }
+
+        if (greenChest != null)
+        {
+            GameObject chest = Instantiate(greenChest, corners[2], Quaternion.identity);
+            chest.transform.localScale =chest.transform.localScale* AgentSize;
+            chest.transform.localRotation = Quaternion.Euler(-90, -180 , chest.transform.localRotation.eulerAngles.z);
+            occupiedPositions.Add(corners[2]);
+        }
+    }
+
 
     Vector3 GetRandomFreePosition()
     {
