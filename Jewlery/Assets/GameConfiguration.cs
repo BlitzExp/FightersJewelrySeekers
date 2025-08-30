@@ -19,7 +19,7 @@ public class GameConfiguration : MonoBehaviour
     [SerializeField] int numJewel;
 
 
-    private int numColor = 3;
+    [SerializeField] int numColor = 3;
     [Header("Number of Agents")]
     [SerializeField] int numAgent;
 
@@ -53,7 +53,7 @@ public class GameConfiguration : MonoBehaviour
     private Vector3[,] grid; // posiciones del grid
     private int gridWidth;
     private int gridHeight;
-    private const float GRID_PERCENT = 0.9f;
+    private const float GRID_PERCENT = 0.8f;
     private HashSet<Vector3> occupiedPositions = new HashSet<Vector3>();
 
     private void OnValidate()
@@ -65,7 +65,9 @@ public class GameConfiguration : MonoBehaviour
 
 
         if (numJewel < 1) { numJewel = 1; }
-        if (numAgent <3 ) { numAgent = 3; }
+        if (numAgent < 3 ) { numAgent = 3; }
+        if (numColor > 3) { numColor = 3; } else if (numColor < 1) { numColor = 1; }
+
     }
     void Start()
     {
@@ -86,9 +88,21 @@ public class GameConfiguration : MonoBehaviour
         {
             greenAgent.transform.localScale = new Vector3(AgentSize, AgentSize, AgentSize);
         }
+        SharedKnowledge.numberOfAgents = numAgent;
+        SharedKnowledge.totalnumberOfGems = numJewel * numColor;
+        SharedKnowledge.numberOfRedGems = numJewel;
+        SharedKnowledge.numberOfBlueGems = numJewel;
+        SharedKnowledge.numberOfGreenGems = numJewel;
+
 
 
         GenerateGrid();
+        SharedKnowledge.grid = grid;
+        SharedKnowledge.MissingPos = new List<Vector3>();
+        foreach (Vector3 position in grid)
+        {
+            SharedKnowledge.MissingPos.Add(position);
+        }
         spawnChests();
         SpawnAgents();
         SpawnJewels();
@@ -138,20 +152,34 @@ public class GameConfiguration : MonoBehaviour
         {
             Vector3 pos = GetRandomFreePosition();
 
-            if (next == 1 && rebAgent != null)
+            GameObject agentInstance = null;
+
+            if (next == 1 && rebAgent != null || numColor == 1)
             {
-                Instantiate(rebAgent, pos, Quaternion.identity).transform.localScale = Vector3.one * AgentSize;
+                agentInstance = Instantiate(rebAgent, pos, Quaternion.identity);
                 next = 2;
             }
-            else if (next == 2 && blueAgent != null)
+            else if (next == 2 && blueAgent != null && numColor >=2)
             {
-                Instantiate(blueAgent, pos, Quaternion.identity).transform.localScale = Vector3.one * AgentSize;
+                agentInstance = Instantiate(blueAgent, pos, Quaternion.identity);
                 next = 3;
+                if (numColor == 2) {
+                    next = 1;
+                }
             }
-            else if (next == 3 && greenAgent != null)
+            else if (next == 3 && greenAgent != null && numColor == 3)
             {
-                Instantiate(greenAgent, pos, Quaternion.identity).transform.localScale = Vector3.one * AgentSize;
+                agentInstance = Instantiate(greenAgent, pos, Quaternion.identity);
                 next = 1;
+            }
+
+            if (agentInstance != null)
+            {
+                agentInstance.transform.localScale = transform.localScale * AgentSize;
+                SharedKnowledge.AgentPositions.Add(pos);
+                SharedKnowledge.VisitedPositions.Add(pos);
+                SharedKnowledge.MissingPos.Remove(pos);
+                AgentController agentController = agentInstance.GetComponent<AgentController>();
             }
 
             // Marcar posición como ocupada
@@ -189,22 +217,34 @@ public class GameConfiguration : MonoBehaviour
             chest.transform.localScale = chest.transform.localScale * AgentSize;
             chest.transform.localRotation = Quaternion.Euler(-90, chest.transform.localRotation.eulerAngles.y, chest.transform.localRotation.eulerAngles.z);
             occupiedPositions.Add(corners[0]);
+            SharedKnowledge.redChest = corners[0];
+            SharedKnowledge.VisitedPositions.Add(corners[0]);
+            SharedKnowledge.MissingPos.Remove(corners[0]);
+            SharedKnowledge.BlockedPositions.Add(corners[0]); 
         }
 
-        if (blueChest != null)
+        if (blueChest != null && numColor >=2)
         {
             GameObject chest = Instantiate(blueChest, corners[1], Quaternion.identity);
             chest.transform.localScale = chest.transform.localScale * AgentSize;
             chest.transform.localRotation = Quaternion.Euler(-90, chest.transform.localRotation.eulerAngles.y, chest.transform.localRotation.eulerAngles.z);
             occupiedPositions.Add(corners[1]);
+            SharedKnowledge.blueChest = corners[1];
+            SharedKnowledge.VisitedPositions.Add(corners[1]);
+            SharedKnowledge.MissingPos.Remove(corners[1]);
+            SharedKnowledge.BlockedPositions.Add(corners[0]);
         }
 
-        if (greenChest != null)
+        if (greenChest != null && numColor ==3)
         {
             GameObject chest = Instantiate(greenChest, corners[2], Quaternion.identity);
             chest.transform.localScale =chest.transform.localScale* AgentSize;
             chest.transform.localRotation = Quaternion.Euler(-90, -180 , chest.transform.localRotation.eulerAngles.z);
             occupiedPositions.Add(corners[2]);
+            SharedKnowledge.greenChest = corners[2];
+            SharedKnowledge.VisitedPositions.Add(corners[2]);
+            SharedKnowledge.MissingPos.Remove(corners[2]);
+            SharedKnowledge.BlockedPositions.Add(corners[0]);
         }
     }
 
@@ -243,9 +283,15 @@ public class GameConfiguration : MonoBehaviour
         // Red
         SpawnJewelsByColor(new GameObject[] { (GameObject)redJewelGem, (GameObject)redJewelRing, (GameObject)redJewelRup }, numJewel);
         // Blue
-        SpawnJewelsByColor(new GameObject[] { (GameObject)blueJewelGem, (GameObject)blueJewelRing, (GameObject)blueJewelRup }, numJewel);
+        if (numColor >= 2)
+        {
+            SpawnJewelsByColor(new GameObject[] { (GameObject)blueJewelGem, (GameObject)blueJewelRing, (GameObject)blueJewelRup }, numJewel);
+        }
         // Green
-        SpawnJewelsByColor(new GameObject[] { (GameObject)greenJewelGem, (GameObject)greenJewelRing, (GameObject)greenJewelRup }, numJewel);
+        if (numColor == 3)
+        {
+            SpawnJewelsByColor(new GameObject[] { (GameObject)greenJewelGem, (GameObject)greenJewelRing, (GameObject)greenJewelRup }, numJewel);
+        }
     }
 
     void SpawnJewelsByColor(GameObject[] prefabs, int count)
