@@ -17,17 +17,35 @@ public class AgentController : MonoBehaviour
     private bool isRotating = false;
     private Quaternion targetRotation;
 
+    [SerializeField] private float stuckThreshold = 3f; // segundos sin moverse
+    private float stuckTimer = 0f;
+    private Vector3 lastPosition;
+
     void Start()
     {
         targetPosition = transform.position;
         SharedKnowledge.AgentPositions.Add(transform.position);
+        lastPosition = transform.position;
     }
 
     void Update()
     {
-        // actualizar posición del agente en memoria compartida
+        // actualizar posición en memoria compartida
         SharedKnowledge.AgentPositions.Remove(transform.position);
         SharedKnowledge.AgentPositions.Add(transform.position);
+
+        if (transform.rotation.eulerAngles.z != 0) 
+        {
+            Vector3 euler = transform.rotation.eulerAngles;
+            euler.z = 0;
+            transform.rotation = Quaternion.Euler(euler);
+        }
+        if (transform.rotation.eulerAngles.x != 0) 
+        {
+            Vector3 euler = transform.rotation.eulerAngles;
+            euler.x = 0;
+            transform.rotation = Quaternion.Euler(euler);
+        }
 
         if (isRotating)
         {
@@ -39,12 +57,49 @@ public class AgentController : MonoBehaviour
 
             if (Vector3.Distance(transform.position, targetPosition) < 0.1f)
             {
+                // liberar reserva
+                SharedKnowledge.AgentNextPositions.Remove(targetPosition);
+
                 if (deliveringGem)
                     DeliverGem();
                 else
                     FindNextTarget();
             }
         }
+
+        if (Vector3.Distance(transform.position, lastPosition) < 0.05f)
+        {
+            stuckTimer += Time.deltaTime;
+            if (stuckTimer >= stuckThreshold)
+            {
+                Debug.Log($"{name} estaba atascado, forzando nuevo destino...");
+                ForceReset();
+            }
+        }
+        else
+        {
+            stuckTimer = 0f;
+            lastPosition = transform.position;
+        }
+
+    }
+
+    void ForceReset()
+    {
+        stuckTimer = 0f;
+
+        // si lleva una gema → intentar ir al cofre de nuevo
+        if (carriedGem != null)
+        {
+            deliveringGem = true;
+            Vector3 chestPos = GetChestPosition();
+            SetNewTarget(chestPos);
+            return;
+        }
+
+        // si no → buscar un vecino alternativo
+        Vector3 nextPos = FindUnvisitedNeighbor();
+        SetNewTarget(nextPos);
     }
 
     // --- Movimiento ---
@@ -70,7 +125,7 @@ public class AgentController : MonoBehaviour
         if (direction != Vector3.zero)
         {
             targetRotation = Quaternion.LookRotation(direction, Vector3.up);
-            isRotating = true;   // detener movimiento hasta terminar de rotar
+            isRotating = true;
         }
         targetPosition = newTarget;
     }
@@ -82,18 +137,7 @@ public class AgentController : MonoBehaviour
         {
             deliveringGem = true;
             Vector3 chestPos = GetChestPosition();
-
-            // 🚫 si el cofre está ocupado → buscar alternativa
-            if (SharedKnowledge.BlockedPositions.Contains(chestPos) ||
-                SharedKnowledge.AgentPositions.Contains(chestPos))
-            {
-                Vector3 altTarget = FindUnvisitedNeighbor();
-                SetNewTarget(altTarget);
-            }
-            else
-            {
-                SetNewTarget(chestPos);
-            }
+            SetNewTarget(chestPos);
             return;
         }
 
@@ -140,6 +184,7 @@ public class AgentController : MonoBehaviour
             new Vector2Int(curI, curJ - 1)
         };
 
+        // vecinos libres no visitados
         foreach (var n in neighbors)
         {
             if (n.x >= 0 && n.x < rows && n.y >= 0 && n.y < cols)
@@ -148,7 +193,22 @@ public class AgentController : MonoBehaviour
                 if (!SharedKnowledge.VisitedPositions.Contains(candidate) &&
                     !SharedKnowledge.AgentNextPositions.Contains(candidate) &&
                     !SharedKnowledge.BlockedPositions.Contains(candidate) &&
-                    !SharedKnowledge.AgentPositions.Contains(candidate)) // 🚫 evitar agentes
+                    !SharedKnowledge.AgentPositions.Contains(candidate))
+                {
+                    SharedKnowledge.AgentNextPositions.Add(candidate);
+                    return candidate;
+                }
+            }
+        }
+
+        // fallback: vecinos ya visitados
+        foreach (var n in neighbors)
+        {
+            if (n.x >= 0 && n.x < rows && n.y >= 0 && n.y < cols)
+            {
+                Vector3 candidate = SharedKnowledge.grid[n.x, n.y];
+                if (!SharedKnowledge.AgentNextPositions.Contains(candidate) &&
+                    !SharedKnowledge.BlockedPositions.Contains(candidate))
                 {
                     SharedKnowledge.AgentNextPositions.Add(candidate);
                     return candidate;
@@ -169,7 +229,7 @@ public class AgentController : MonoBehaviour
             case ColorOption.Green: gems = SharedKnowledge.greenGemsFound; break;
         }
 
-        if (gems != null && gems.Count > 0)
+        if (gems != null && gems.Count > 0 && carriedGem == null)
         {
             Vector3 gemPos = gems[0];
             gems.RemoveAt(0);
@@ -178,37 +238,21 @@ public class AgentController : MonoBehaviour
         return null;
     }
 
+    // --- Cofre dinámico ---
     Vector3 GetChestPosition()
     {
-        return AgentColor switch
-        {
-            ColorOption.Blue => SharedKnowledge.blueChest,
-            ColorOption.Red => SharedKnowledge.redChest,
-            ColorOption.Green => SharedKnowledge.greenChest,
-            _ => transform.position
-        };
+        if (AgentColor == ColorOption.Blue)
+            return SharedKnowledge.blueChest;
+        else if (AgentColor == ColorOption.Red)
+            return SharedKnowledge.redChest;
+        else
+            return SharedKnowledge.greenChest; 
     }
 
     // --- Entregar gema ---
     void DeliverGem()
     {
-        if (Vector3.Distance(transform.position, GetChestPosition()) < 0.2f && carriedGem != null)
-        {
-            // liberar celda de obstáculo
-            SharedKnowledge.BlockedPositions.Remove(carriedGem.transform.position);
-
-            // quitar de memoria compartida
-            switch (AgentColor)
-            {
-                case ColorOption.Blue: SharedKnowledge.blueGemsFound.Remove(carriedGem.transform.position); break;
-                case ColorOption.Red: SharedKnowledge.redGemsFound.Remove(carriedGem.transform.position); break;
-                case ColorOption.Green: SharedKnowledge.greenGemsFound.Remove(carriedGem.transform.position); break;
-            }
-
-            Destroy(carriedGem);
-            carriedGem = null;
-            deliveringGem = false;
-        }
+        // ya no destruye aquí, se maneja en OnTriggerEnter con Chest
     }
 
     // --- Detección ---
@@ -217,10 +261,9 @@ public class AgentController : MonoBehaviour
         if (other.CompareTag("Gem"))
         {
             GemType gem = other.GetComponent<GemType>();
-
             if (gem != null)
             {
-                // Registrar en memoria compartida
+                // registrar en memoria compartida
                 switch (gem.GemColorValue)
                 {
                     case GemType.ColorOption.Blue:
@@ -237,7 +280,7 @@ public class AgentController : MonoBehaviour
                         break;
                 }
 
-                // 🚫 Si la gema no es de mi color → bloquear y esquivar
+                // 🚫 no es de mi color → esquivar
                 if (gem.GemColorValue.ToString() != AgentColor.ToString())
                 {
                     SharedKnowledge.BlockedPositions.Add(other.transform.position);
@@ -246,25 +289,42 @@ public class AgentController : MonoBehaviour
                     return;
                 }
 
-                // ✅ Si es de mi color → recoger
+                // ✅ es de mi color → recoger
                 if (carriedGem == null && !gem.IsCollected)
                 {
                     carriedGem = other.gameObject;
                     gem.CollectGem();
 
-                    // quitar física
                     Rigidbody rb = carriedGem.GetComponent<Rigidbody>();
                     if (rb != null) rb.isKinematic = true;
-
-                    // quitar collider
                     Collider col = carriedGem.GetComponent<Collider>();
                     if (col != null) col.enabled = false;
 
-                    // poner como hijo del agente
                     carriedGem.transform.SetParent(gemTakingPos.transform);
                     carriedGem.transform.localPosition = Vector3.zero;
                 }
             }
         }
+
+        if (carriedGem != null && other.CompareTag("Chest"))
+        {
+            ChestTag chest = other.GetComponent<ChestTag>();
+            if (chest != null && chest.getChestColor().ToString() == AgentColor.ToString())
+            {
+                // ✅ entregar gema
+                Destroy(carriedGem);
+                carriedGem = null;
+                deliveringGem = false;
+                Vector3 altTarget = FindUnvisitedNeighbor();
+                SetNewTarget(altTarget);
+                SharedKnowledge.VisitedPositions.Add(altTarget);
+            }
+        }
+    }
+
+    // --- Colisión con cofres ---
+    private void OnTriggerEnter(Collider other)
+    {
+        SharedKnowledge.numberOfCollisions = SharedKnowledge.numberOfCollisions + 1;
     }
 }

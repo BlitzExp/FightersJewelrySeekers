@@ -134,6 +134,7 @@ GameObject:
   m_Component:
   - component: {fileID: 77538607}
   - component: {fileID: 77538608}
+  - component: {fileID: 77538609}
   m_Layer: 0
   m_Name: DetectionZone
   m_TagString: Untagged
@@ -177,6 +178,18 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 1
   m_Center: {x: 0, y: 0.32, z: -0.07}
+--- !u!114 &77538609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 77538606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 682bed321ef65274ba2c5046d2e8ba03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &273719867
 GameObject:
   m_ObjectHideFlags: 0
@@ -1078,7 +1091,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4765fad3bf05f24599e36cfa0be4bd0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ChestColor: 0
+  ChestColorValue: 0
 --- !u!65 &1194651785
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1095,7 +1108,7 @@ BoxCollider:
     m_Bits: 0
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
-  m_ProvidesContacts: 1
+  m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.009994362, y: 0.010604035, z: 0.012315445}
@@ -1223,7 +1236,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4765fad3bf05f24599e36cfa0be4bd0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ChestColor: 1
+  ChestColorValue: 1
 --- !u!65 &1392988981
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1240,7 +1253,7 @@ BoxCollider:
     m_Bits: 0
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
-  m_ProvidesContacts: 1
+  m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.009994362, y: 0.010604035, z: 0.012315445}
@@ -1493,7 +1506,7 @@ MonoBehaviour:
   UStage: 20
   VStage: 20
   JewelSize: 1
-  numJewel: 1
+  numJewel: 4
   numColor: 3
   numAgent: 3
   stage: {fileID: 834836016}
@@ -1997,6 +2010,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1911241305}
   - component: {fileID: 1911241306}
+  - component: {fileID: 1911241307}
   m_Layer: 0
   m_Name: DetectionZone
   m_TagString: Untagged
@@ -2040,6 +2054,18 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 1
   m_Center: {x: 0, y: 0.32, z: -0.07}
+--- !u!114 &1911241307
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1911241304}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 682bed321ef65274ba2c5046d2e8ba03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1999505827
 GameObject:
   m_ObjectHideFlags: 0
@@ -2250,7 +2276,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4765fad3bf05f24599e36cfa0be4bd0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ChestColor: 2
+  ChestColorValue: 2
 --- !u!65 &2046915675
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2267,7 +2293,7 @@ BoxCollider:
     m_Bits: 0
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
-  m_ProvidesContacts: 1
+  m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.009994362, y: 0.010604035, z: 0.012315445}

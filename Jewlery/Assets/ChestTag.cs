@@ -5,10 +5,10 @@ public class ChestTag : MonoBehaviour
     public enum ColorOption
     {Blue,Red,Green}
 
-    [SerializeField] private ColorOption ChestColor;
+    [SerializeField] private ColorOption ChestColorValue;
 
-    ColorOption getCemColor()
+    public ColorOption getChestColor()
     {
-        return ChestColor;
+        return ChestColorValue;
     }
 }
