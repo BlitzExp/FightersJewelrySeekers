@@ -220,7 +220,9 @@ public class GameConfiguration : MonoBehaviour
             SharedKnowledge.redChest = corners[0];
             SharedKnowledge.VisitedPositions.Add(corners[0]);
             SharedKnowledge.MissingPos.Remove(corners[0]);
-            SharedKnowledge.BlockedPositions.Add(corners[0]); 
+            SharedKnowledge.BlockedPositionsRed.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsBlue.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsGreen.Add(corners[0]);
         }
 
         if (blueChest != null && numColor >=2)
@@ -232,7 +234,9 @@ public class GameConfiguration : MonoBehaviour
             SharedKnowledge.blueChest = corners[1];
             SharedKnowledge.VisitedPositions.Add(corners[1]);
             SharedKnowledge.MissingPos.Remove(corners[1]);
-            SharedKnowledge.BlockedPositions.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsRed.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsBlue.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsGreen.Add(corners[0]);
         }
 
         if (greenChest != null && numColor ==3)
@@ -244,7 +248,9 @@ public class GameConfiguration : MonoBehaviour
             SharedKnowledge.greenChest = corners[2];
             SharedKnowledge.VisitedPositions.Add(corners[2]);
             SharedKnowledge.MissingPos.Remove(corners[2]);
-            SharedKnowledge.BlockedPositions.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsRed.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsBlue.Add(corners[0]);
+            SharedKnowledge.BlockedPositionsGreen.Add(corners[0]);
         }
     }
 
@@ -306,6 +312,7 @@ public class GameConfiguration : MonoBehaviour
                 GameObject prefab = prefabs[Random.Range(0, prefabs.Length)];
                 GameObject jewel = Instantiate(prefab, pos, Quaternion.identity);
                 jewel.transform.localScale = jewel.transform.localScale * JewelSize;
+                jewel.GetComponent<GemType>().setPos(pos);
                 jewel.transform.localRotation = Quaternion.Euler(-90, jewel.transform.localRotation.eulerAngles.y, jewel.transform.localRotation.eulerAngles.z);
 
                 // Mark as occupied

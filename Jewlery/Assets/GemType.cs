@@ -7,6 +7,8 @@ public class GemType : MonoBehaviour
     [SerializeField] private ColorOption GemColor;
     private bool isCollected = false;
 
+    private Vector3 position;
+
     // Propiedad para consultar el color
     public ColorOption GemColorValue => GemColor;
 
@@ -18,5 +20,15 @@ public class GemType : MonoBehaviour
     {
         isCollected = true;
         Debug.Log($"Gem {GemColor} collected!");
+    }
+
+    public void setPos(Vector3 pos) 
+    {
+        position = pos;
+    }
+
+    public Vector3 getPos()
+    {
+        return position;
     }
 }
