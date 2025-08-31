@@ -59,6 +59,7 @@ public class SharedKnowledge : MonoBehaviour
             Debug.Log("All gems collected!");
             Debug.Log($"Total Collisions: {numberOfCollisions}");
             Debug.Log($"Time taken: {gameTimer}");
+            Debug.Log($"Total Movements: {numberOfMovements}");
 
             //Pausar todo el juego
             Time.timeScale = 0f;

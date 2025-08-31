@@ -179,6 +179,7 @@ public class GameConfiguration : MonoBehaviour
                 SharedKnowledge.AgentPositions.Add(pos);
                 SharedKnowledge.VisitedPositions.Add(pos);
                 SharedKnowledge.MissingPos.Remove(pos);
+                agentInstance.transform.localRotation= Quaternion.Euler(90*i, agentInstance.transform.localRotation.eulerAngles.y, agentInstance.transform.localRotation.eulerAngles.z);
                 AgentController agentController = agentInstance.GetComponent<AgentController>();
             }
 

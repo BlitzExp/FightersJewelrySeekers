@@ -123,6 +123,7 @@ public class AgentController : MonoBehaviour
 
     void SetNewTarget(Vector3 newTarget)
     {
+        SharedKnowledge.numberOfMovements++;
         Vector3 direction = (newTarget - transform.position).normalized;
         if (direction != Vector3.zero)
         {
