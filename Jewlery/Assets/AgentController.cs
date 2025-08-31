@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 public class AgentController : MonoBehaviour
 {
@@ -300,21 +301,24 @@ public class AgentController : MonoBehaviour
                         if (!SharedKnowledge.redGemsFound.Contains(gemGridPos))
                           SharedKnowledge.BlockedPositionsBlue.Add(gemGridPos);
                           SharedKnowledge.BlockedPositionsGreen.Add(gemGridPos);
-                          SharedKnowledge.redGemsFound.Add(gemGridPos);
+                          SharedKnowledge.VisitedPositions.Add(gemGridPos);
+                           SharedKnowledge.redGemsFound.Add(gemGridPos);
                     }
                     else if (gem.GemColorValue.ToString() == "Blue")
                     {
                         if (!SharedKnowledge.blueGemsFound.Contains(gemGridPos))
                           SharedKnowledge.BlockedPositionsRed.Add(gemGridPos);
                           SharedKnowledge.BlockedPositionsGreen.Add(gemGridPos);
-                          SharedKnowledge.blueGemsFound.Add(gemGridPos);
+                        SharedKnowledge.VisitedPositions.Add(gemGridPos);
+                        SharedKnowledge.blueGemsFound.Add(gemGridPos);
                     }
                     else if (gem.GemColorValue.ToString() == "Green")
                     {
                         if (!SharedKnowledge.greenGemsFound.Contains(gemGridPos))
                           SharedKnowledge.BlockedPositionsRed.Add(gemGridPos);
                           SharedKnowledge.BlockedPositionsBlue.Add(gemGridPos);
-                          SharedKnowledge.greenGemsFound.Add(gemGridPos);
+                        SharedKnowledge.VisitedPositions.Add(gemGridPos);
+                        SharedKnowledge.greenGemsFound.Add(gemGridPos);
                     }
                     return;
                 }
@@ -324,6 +328,7 @@ public class AgentController : MonoBehaviour
                 {
                     carriedGem = other.gameObject;
                     gem.CollectGem();
+                    SharedKnowledge.VisitedPositions.Add(gemGridPos);
 
                     if (SharedKnowledge.redGemsFound.Contains(gemGridPos))
                     {
@@ -351,7 +356,7 @@ public class AgentController : MonoBehaviour
                             SharedKnowledge.BlockedPositionsGreen.Remove(gemGridPos);
                     }
                     // liberar reserva
-                    SharedKnowledge.ReservedGems.Remove(gemGridPos);
+                    //SharedKnowledge.ReservedGems.Remove(gemGridPos);
 
                     Rigidbody rb = carriedGem.GetComponent<Rigidbody>();
                     if (rb != null) rb.isKinematic = true;
@@ -360,6 +365,9 @@ public class AgentController : MonoBehaviour
 
                     carriedGem.transform.SetParent(gemTakingPos.transform);
                     carriedGem.transform.localPosition = Vector3.zero;
+
+                    if (goingToGem && reservedGemPos != gemGridPos)
+                        ReleaseReservedGem(reservedGemPos.Value);
 
                     goingToGem = false;
                     reservedGemPos = null;
@@ -371,6 +379,65 @@ public class AgentController : MonoBehaviour
         }
     }
 
+    public void OnDetectionObstacleTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Romba"))
+        {
+            Debug.Log($"{name} encontró otro agente {other.name}");
+
+            // Evitar múltiples reacciones seguidas
+            if (collTimer <= 0f)
+            {
+                collTimer = 0.5f;
+
+                // Decidir quién rota y quién se queda
+                if (string.Compare(name, other.name) < 0) // El que tenga "menor nombre" rota
+                {
+                    Debug.Log($"{name} rota 90° para evitar bloqueo con {other.name}");
+                    StartCoroutine(RotateAndMoveAway());
+                }
+                else
+                {
+                    Debug.Log($"{name} se queda detenido 0.4s porque {other.name} rotará");
+                    StartCoroutine(StopForSeconds(0.4f));
+                }
+            }
+        }
+    }
+
+    // Corutina: detenerse
+    private IEnumerator StopForSeconds(float seconds)
+    {
+        float originalSpeed = speed;
+        speed = 0f;
+        yield return new WaitForSeconds(seconds);
+        speed = originalSpeed;
+    }
+
+    // Corutina: rotar 90° y moverse un paso en esa dirección
+    private IEnumerator RotateAndMoveAway()
+    {
+        float originalSpeed = speed;
+        speed = 0f;  // detener mientras rota
+
+        // Rotar 90° en Y (a la derecha)
+        transform.Rotate(Vector3.up, 90f);
+
+        yield return new WaitForSeconds(0.3f);
+
+        speed = originalSpeed;
+
+        // calcular nueva posición un paso hacia adelante
+        Vector3 newDir = transform.forward;
+        Vector3 candidate = transform.position + newDir;
+
+        // liberar la posición bloqueada
+        SharedKnowledge.AgentNextPositions.Remove(targetPosition);
+        SharedKnowledge.VisitedPositions.Add(transform.position);
+
+        // marcar como nuevo destino
+        SetNewTarget(candidate);
+    }
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Romba") || other.CompareTag("Gem")) 
@@ -378,6 +445,15 @@ public class AgentController : MonoBehaviour
             Debug.Log($"{name} colisionó con {other.name}");
             Debug.Log($"Estab llevando gema {deliveringGem}");
 
+            if (carriedGem == null && other.CompareTag("Gem")) 
+            {
+                GemType gem = other.GetComponent<GemType>();
+                if (gem != null && gem.GemColorValue.ToString() == AgentColor.ToString())
+                {
+                    return;
+                }
+                
+            }
 
             if (collTimer <= 0f)
             {
