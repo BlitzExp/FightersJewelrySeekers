@@ -14,3 +14,5 @@ To adjust the parameters for the agents you need to select the GameManager objec
 To adjust the speed of the agents you need to open the Rumbas object which contains the 3 models for the agents, inside those object it exist an script called Agent Controller where the speed and rotation speed can be changed.
 
 If you do not see the timer on the game view, change the display type to 1920 X 1080
+
+To see the data of the run, you can see it in the console
