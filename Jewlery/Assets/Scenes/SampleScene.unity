@@ -2134,12 +2134,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AgentSize: 1
-  UStage: 15
-  VStage: 15
+  UStage: 25
+  VStage: 25
   JewelSize: 1
-  numJewel: 3
+  numJewel: 5
   numColor: 3
-  numAgent: 3
+  numAgent: 4
   stage: {fileID: 834836016}
   rebAgent: {fileID: 2073481222}
   blueAgent: {fileID: 29588193}

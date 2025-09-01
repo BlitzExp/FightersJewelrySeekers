@@ -440,6 +440,7 @@ public class AgentController : MonoBehaviour
     }
     private void OnTriggerEnter(Collider other)
     {
+        OnDetectionTriggerEnter(other);
         if (other.CompareTag("Romba") || other.CompareTag("Gem")) 
         {
             Debug.Log($"{name} colisionó con {other.name}");
