@@ -2,31 +2,44 @@
 using System.Collections.Generic;
 using System.Collections;
 
+// Main class controlling the agent's behavior
 public class AgentController : MonoBehaviour
 {
+
+    // Color of the agent
     public enum ColorOption { Blue, Red, Green }
 
+
+    //Personalization of the agent
     [SerializeField] private ColorOption AgentColor;
     [SerializeField] private float speed = 5f;
     [SerializeField] private float rotationSpeed = 360f;
     [SerializeField] private GameObject gemTakingPos;
 
+    //Position where the agent is moving to
     private Vector3 targetPosition;
+
+    // The gem if it is carring one
     private GameObject carriedGem = null;
     private bool deliveringGem = false;
 
+    // Rotation control
     private bool isRotating = false;
     private Quaternion targetRotation;
 
+    // Stuck detection
     [SerializeField] private float stuckThreshold = 3f;
     private float stuckTimer = 0f;
     private Vector3 lastPosition;
 
+    // Gem reservation system
     private bool goingToGem = false;
     private Vector3? reservedGemPos = null;
 
+    // Collision cooldown
     private float collTimer = 0f;
 
+    // Initialization
     void Start()
     {
         targetPosition = transform.position;
@@ -36,9 +49,11 @@ public class AgentController : MonoBehaviour
 
     void Update()
     {
+        // Actualizar posición en conocimiento compartido
         SharedKnowledge.AgentPositions.Remove(transform.position);
         SharedKnowledge.AgentPositions.Add(transform.position);
 
+        // Mantain the orientation of the agent in z and x axis to 0
         if (transform.rotation.eulerAngles.z != 0 || transform.rotation.eulerAngles.x != 0)
         {
             Vector3 euler = transform.rotation.eulerAngles;
@@ -46,6 +61,7 @@ public class AgentController : MonoBehaviour
             transform.rotation = Quaternion.Euler(euler);
         }
 
+        // Movement and rotation
         if (isRotating)
             RotateTowardsTarget();
         else
@@ -56,17 +72,16 @@ public class AgentController : MonoBehaviour
             {
                 SharedKnowledge.AgentNextPositions.Remove(targetPosition);
 
-                if (deliveringGem) DeliverGem();
-                else FindNextTarget();
+                if (!deliveringGem) FindNextTarget();
             }
         }
 
+        // Detection of being stuck
         if (Vector3.Distance(transform.position, lastPosition) < 0.05f)
         {
             stuckTimer += Time.deltaTime;
             if (stuckTimer >= stuckThreshold)
             {
-                Debug.Log($"{name} estaba atascado, forzando nuevo destino...");
                 ForceReset();
             }
         }
@@ -76,16 +91,19 @@ public class AgentController : MonoBehaviour
             lastPosition = transform.position;
         }
 
+        //Collider timer, to avoid multiple collisions with the same object
         if (collTimer > 0) collTimer -= Time.deltaTime;
         if (collTimer < 0f) {
             collTimer = 0f;
         }
     }
 
+    // For the cases where the agent gets stcuk on a place
     void ForceReset()
     {
         stuckTimer = 0f;
 
+        // When carrying a gem, go to the chest
         if (carriedGem != null)
         {
             deliveringGem = true;
@@ -93,6 +111,7 @@ public class AgentController : MonoBehaviour
             return;
         }
 
+        //In case it was going to a gem, release the reservation
         if (reservedGemPos.HasValue)
         {
             // liberar gema reservada
@@ -101,16 +120,18 @@ public class AgentController : MonoBehaviour
             goingToGem = false;
         }
 
+        // Choose a new random target
         Vector3 nextPos = FindUnvisitedNeighbor();
         SetNewTarget(nextPos);
     }
 
-    // --- Movimiento ---
+    // Movement of the agent to the target position
     void MoveToTarget()
     {
         transform.position = Vector3.MoveTowards(transform.position, targetPosition, speed * Time.deltaTime);
     }
 
+    // Rotation of the agent to face the target position
     void RotateTowardsTarget()
     {
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
@@ -122,8 +143,10 @@ public class AgentController : MonoBehaviour
         }
     }
 
+    // Set a new target position and calculate the required rotation
     void SetNewTarget(Vector3 newTarget)
     {
+        // Increse the number of movements
         SharedKnowledge.numberOfMovements++;
         Vector3 direction = (newTarget - transform.position).normalized;
         if (direction != Vector3.zero)
@@ -134,9 +157,10 @@ public class AgentController : MonoBehaviour
         targetPosition = newTarget;
     }
 
-    // --- Lógica de búsqueda ---
+    // Fucntion to find the next target position to go to
     void FindNextTarget()
     {
+        // When carrying a gem, go to the chest
         if (carriedGem != null)
         {
             deliveringGem = true;
@@ -144,6 +168,7 @@ public class AgentController : MonoBehaviour
             return;
         }
 
+        // If there is a gem of my color, go to it
         Vector3? gemPos = FindGemOfMyColor();
         if (gemPos.HasValue)
         {
@@ -151,17 +176,22 @@ public class AgentController : MonoBehaviour
             return;
         }
 
+        //In case it is seraching for a gem, then find a new target
         Vector3 nextPos = FindUnvisitedNeighbor();
         SetNewTarget(nextPos);
         SharedKnowledge.VisitedPositions.Add(nextPos);
         SharedKnowledge.MissingPos.Remove(nextPos);
     }
 
+
+    // Function to search for the nearest position that has not been visited yet
     Vector3 FindUnvisitedNeighbor()
     {
+        // Obtain the dimensions of the grid
         int rows = SharedKnowledge.grid.GetLength(0);
         int cols = SharedKnowledge.grid.GetLength(1);
 
+        // Find the closest grid cell to the current position
         Vector3 currentPos = transform.position;
         int curI = -1, curJ = -1;
 
@@ -179,6 +209,7 @@ public class AgentController : MonoBehaviour
             }
         }
 
+        // Check the four neighboring cells (up, down, left, right)
         List<Vector2Int> neighbors = new List<Vector2Int>
         {
             new Vector2Int(curI + 1, curJ),
@@ -187,6 +218,7 @@ public class AgentController : MonoBehaviour
             new Vector2Int(curI, curJ - 1)
         };
 
+        // Select the first valid neighbor that has not been visited or blocked
         foreach (var n in neighbors)
         {
             if (n.x >= 0 && n.x < rows && n.y >= 0 && n.y < cols)
@@ -215,13 +247,17 @@ public class AgentController : MonoBehaviour
             }
         }
 
-        // fallback: si no hay vecinos válidos → elegir una celda aleatoria que no sea un cofre
+        // In case there are not unvisited neighbors, pick a random cell
         return GetRandomExplorationCell();
     }
+
+    //Function to check if there has been found a gem of the agent's color
 
     Vector3? FindGemOfMyColor()
     {
         List<Vector3> gems = null;
+
+        //Checks in the shared knowledge if there is any gem of the agent's color
         switch (AgentColor)
         {
             case ColorOption.Blue: gems = SharedKnowledge.blueGemsFound; break;
@@ -229,14 +265,17 @@ public class AgentController : MonoBehaviour
             case ColorOption.Green: gems = SharedKnowledge.greenGemsFound; break;
         }
 
+        // If there is any gem of the agent's color, go to the closest one that is not reserved
         if (gems != null && gems.Count > 0 && carriedGem == null)
         {
             float minDist = Mathf.Infinity;
             Vector3? bestGem = null;
 
+
+            // Find the closest gem that is not reserved
             foreach (var gemPos in gems)
             {
-                if (SharedKnowledge.ReservedGems.Contains(gemPos)) continue; // 🚫 ya reservada
+                if (SharedKnowledge.ReservedGems.Contains(gemPos)) continue; 
                 float dist = Vector3.Distance(transform.position, gemPos);
                 if (dist < minDist)
                 {
@@ -245,34 +284,41 @@ public class AgentController : MonoBehaviour
                 }
             }
 
+
+            // Reserve the gem
             if (bestGem.HasValue)
             {
                 goingToGem = true;
                 reservedGemPos = bestGem.Value;
-                SharedKnowledge.ReservedGems.Add(bestGem.Value); // ✅ reservar
-                Debug.Log($"{name} reservó gema {AgentColor} en {bestGem.Value}");
+                SharedKnowledge.ReservedGems.Add(bestGem.Value); 
                 return bestGem.Value;
             }
         }
         return null;
     }
 
+
+    // Get the position of the chest corresponding to the agent's color
     Vector3 GetChestPosition()
     {
         if (AgentColor == ColorOption.Blue) return SharedKnowledge.blueChest;
         else if (AgentColor == ColorOption.Red) return SharedKnowledge.redChest;
-        else return SharedKnowledge.greenChest;
+        else if (AgentColor == ColorOption.Green) return SharedKnowledge.greenChest;
+        return Vector3.zero;
     }
 
-    void DeliverGem() { }
 
+    // Fucntion in case the detection zone found an object in its area 
     public void OnDetectionTriggerEnter(Collider other)
     {
+        // If it is a chest and the agent is carrying a gem, deliver it
         if (carriedGem != null && other.CompareTag("Chest"))
         {
             ChestTag chest = other.GetComponent<ChestTag>();
+            // Check if it is the correct color
             if (chest != null && chest.getChestColor().ToString() == AgentColor.ToString())
             {
+                // Deliver the gem
                 SharedKnowledge.missingGems--;
                 Destroy(carriedGem);
                 carriedGem = null;
@@ -280,12 +326,14 @@ public class AgentController : MonoBehaviour
 
                 if (reservedGemPos.HasValue) reservedGemPos = null;
 
+                // Find a new target
                 Vector3 altTarget = FindUnvisitedNeighbor();
                 SetNewTarget(altTarget);
                 SharedKnowledge.VisitedPositions.Add(altTarget);
             }
         }
 
+        // If it is a gem
         if (other.CompareTag("Gem"))
         {
             GemType gem = other.GetComponent<GemType>();
@@ -293,7 +341,7 @@ public class AgentController : MonoBehaviour
             {
                 Vector3 gemGridPos = gem.getPos();
 
-                // no es de mi color → esquivar
+                // If it is not of the agent's color, mark as blocked, share the gem position  and return
                 if (gem.GemColorValue.ToString() != AgentColor.ToString())
                 {
                     if (gem.GemColorValue.ToString() == "Red") 
@@ -323,13 +371,17 @@ public class AgentController : MonoBehaviour
                     return;
                 }
 
-                // es de mi color → recoger
+                // If it is of the color and has not been collected, pick it up
                 if (carriedGem == null && !gem.IsCollected)
                 {
+
                     carriedGem = other.gameObject;
                     gem.CollectGem();
+
+                    // Updates the shared knowledge
                     SharedKnowledge.VisitedPositions.Add(gemGridPos);
 
+                    // Remove from found gems and unmark as blocked, also prevents duplicates and having multiple agents going for the same gem
                     if (SharedKnowledge.redGemsFound.Contains(gemGridPos))
                     {
                         SharedKnowledge.redGemsFound.Remove(gemGridPos);
@@ -355,57 +407,54 @@ public class AgentController : MonoBehaviour
                         if (SharedKnowledge.BlockedPositionsGreen.Contains(gemGridPos))
                             SharedKnowledge.BlockedPositionsGreen.Remove(gemGridPos);
                     }
-                    // liberar reserva
-                    //SharedKnowledge.ReservedGems.Remove(gemGridPos);
 
+                    // Attach the gem to the agent
                     Rigidbody rb = carriedGem.GetComponent<Rigidbody>();
                     if (rb != null) rb.isKinematic = true;
                     Collider col = carriedGem.GetComponent<Collider>();
                     if (col != null) col.enabled = false;
-
                     carriedGem.transform.SetParent(gemTakingPos.transform);
                     carriedGem.transform.localPosition = Vector3.zero;
 
+                    // If it was going to a gem, release the reservation
                     if (goingToGem && reservedGemPos != gemGridPos)
                         ReleaseReservedGem(reservedGemPos.Value);
-
                     goingToGem = false;
                     reservedGemPos = null;
-
                     deliveringGem = true;
+
+                    // Set the chest as the new target
                     SetNewTarget(GetChestPosition());
                 }
             }
         }
     }
 
+    //In case the agent detects an obstacle in front of it
     public void OnDetectionObstacleTriggerEnter(Collider other)
     {
+        // If it is anothe agent, avoid blocking each other
         if (other.CompareTag("Romba"))
         {
-            Debug.Log($"{name} encontró otro agente {other.name}");
-
             // Evitar múltiples reacciones seguidas
             if (collTimer <= 0f)
             {
                 collTimer = 0.5f;
 
-                // Decidir quién rota y quién se queda
-                if (string.Compare(name, other.name) < 0) // El que tenga "menor nombre" rota
+                //Determine which agent should rotate based on the name
+                if (string.Compare(name, other.name) < 0)
                 {
-                    Debug.Log($"{name} rota 90° para evitar bloqueo con {other.name}");
                     StartCoroutine(RotateAndMoveAway());
                 }
                 else
                 {
-                    Debug.Log($"{name} se queda detenido 0.4s porque {other.name} rotará");
                     StartCoroutine(StopForSeconds(0.4f));
                 }
             }
         }
     }
 
-    // Corutina: detenerse
+    // Gorutine to stop the movement of an agent
     private IEnumerator StopForSeconds(float seconds)
     {
         float originalSpeed = speed;
@@ -414,38 +463,29 @@ public class AgentController : MonoBehaviour
         speed = originalSpeed;
     }
 
-    // Corutina: rotar 90° y moverse un paso en esa dirección
+    // Gorutine to rotate a agent and move it away from the obstacle
     private IEnumerator RotateAndMoveAway()
     {
         float originalSpeed = speed;
-        speed = 0f;  // detener mientras rota
-
-        // Rotar 90° en Y (a la derecha)
+        speed = 0f; 
         transform.Rotate(Vector3.up, 90f);
-
         yield return new WaitForSeconds(0.3f);
-
         speed = originalSpeed;
-
-        // calcular nueva posición un paso hacia adelante
         Vector3 newDir = transform.forward;
         Vector3 candidate = transform.position + newDir;
-
-        // liberar la posición bloqueada
         SharedKnowledge.AgentNextPositions.Remove(targetPosition);
         SharedKnowledge.VisitedPositions.Add(transform.position);
-
-        // marcar como nuevo destino
         SetNewTarget(candidate);
     }
+
+    // Function to detect collisions with the agent
     private void OnTriggerEnter(Collider other)
     {
+        // This calls the other collision method, because when this collider is triggered, the other one is not always triggered and it should
         OnDetectionTriggerEnter(other);
         if (other.CompareTag("Romba") || other.CompareTag("Gem")) 
         {
-            Debug.Log($"{name} colisionó con {other.name}");
-            Debug.Log($"Estab llevando gema {deliveringGem}");
-
+            // To avoid counting when the agent is picking up a gem of its color
             if (carriedGem == null && other.CompareTag("Gem")) 
             {
                 GemType gem = other.GetComponent<GemType>();
@@ -456,21 +496,24 @@ public class AgentController : MonoBehaviour
                 
             }
 
+            // To avoid multiple collisions with the same object in a short time being counted
             if (collTimer <= 0f)
             {
-                collTimer = 0.5f; // evitar múltiples colisiones rápidas
+                collTimer = 0.5f;
                 SharedKnowledge.numberOfCollisions++;
             }
         }
         
     }
 
-    // --- Utilidad ---
+    // Functions to manage the reservation of gems
     private void ReleaseReservedGem(Vector3 pos)
     {
         SharedKnowledge.ReservedGems.Remove(pos);
     }
 
+
+    // Function in case there are no unvisited neighbors, to pick a random cell in the grid
     private Vector3 GetRandomExplorationCell()
     {
         int rows = SharedKnowledge.grid.GetLength(0);

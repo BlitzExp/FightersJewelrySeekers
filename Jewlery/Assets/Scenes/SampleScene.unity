@@ -923,8 +923,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   timerText: {fileID: 355700517}
-  countDown: 0
-  startTime: 300
+  elapsedTime: 0
 --- !u!1 &685457350
 GameObject:
   m_ObjectHideFlags: 0
@@ -2134,12 +2133,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AgentSize: 1
-  UStage: 25
-  VStage: 25
+  UStage: 15
+  VStage: 15
   JewelSize: 1
-  numJewel: 5
+  numJewel: 2
   numColor: 3
-  numAgent: 4
+  numAgent: 3
   stage: {fileID: 834836016}
   rebAgent: {fileID: 2073481222}
   blueAgent: {fileID: 29588193}
